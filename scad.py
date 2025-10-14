@@ -105,7 +105,7 @@ def make_scad(**kwargs):
         elif oomp_mode == "oobb":
             kwargs["oomp_classification"] = "oobb"
             kwargs["oomp_type"] = "part"
-            kwargs["oomp_size"] = ""
+            kwargs["oomp_size"] = "holder_dc_to_dc_converter"
             kwargs["oomp_color"] = ""
             kwargs["oomp_description_main"] = ""
             kwargs["oomp_description_extra"] = ""
@@ -118,20 +118,61 @@ def make_scad(**kwargs):
         part_default["full_shift"] = [0, 0, 0]
         part_default["full_rotations"] = [0, 0, 0]
         
-        part = copy.deepcopy(part_default)
-        p3 = copy.deepcopy(kwargs)
-        p3["width"] = 3
-        p3["height"] = 3
-        #p3["thickness"] = 6
-        #p3["extra"] = ""
-        part["kwargs"] = p3
-        nam = "base"
-        part["name"] = nam
-        if oomp_mode == "oobb":
-            p3["oomp_size"] = nam
-        if not test:
-            pass
-            #parts.append(part)
+
+
+        holders = []
+        #electronic_dc_to_dc_converter_buck_style_300_watt_20_amp_52_mm_width_60_mm_length_blue_pcb_aliexpress
+        if True:
+            holder_current = {}
+            holder_current["description_extra"] = "dc_to_dc_converter_buck_style_300_watt_20_amp"
+            holder_current["part_oomp"] = "electronic_dc_to_dc_converter_buck_style_300_watt_20_amp_52_mm_width_60_mm_length_blue_pcb_aliexpress"
+            holder_current["width"] = "5"
+            holder_current["height"] = "5"
+            holder_current["thickness"] = "3"
+            holder_current["holes"] = "top_and_bottom"
+            holders.append(holder_current)
+
+            holder_current = copy.deepcopy(holder_current)
+            holder_current["height"] = 4
+            holder_current["holes"] = "top"
+            holder_current["shift_y"] = -7.5
+            holders.append(holder_current)
+            
+        for holder in holders:
+            part_oomp = holder["part_oomp"]
+            wid = holder["width"]
+            holder.pop("width")
+            hei = holder["height"]
+            holder.pop("height")
+            thi = holder["thickness"]
+            holder.pop("thickness")
+            hol = holder["holes"]
+            holder.pop("holes")
+            shift_y = holder.get("shift_y", 0)
+            holder.pop("shift_y", None)
+            
+            ex = holder["description_extra"]
+            extra = ""
+            extra+= f"{ex}_{hol}_holes"
+            part = copy.deepcopy(part_default)
+            part.update(holder)
+            
+            p3 = copy.deepcopy(kwargs)
+            p3["shift_y"] = shift_y 
+            p3["part_details"] = load_part(part_oomp)
+            p3["width"] = int(wid)
+            p3["height"] = int(hei)
+            p3["thickness"] = int(thi)
+            p3["holes"] = hol
+            p3["extra"] = extra
+            part["kwargs"] = p3
+            nam = "holder_dc_to_dc_converter"
+            part["name"] = nam
+            if oomp_mode == "oobb":
+                p3["oomp_size"] = nam
+            if not test:
+                pass
+                parts.append(part)
 
 
     kwargs["parts"] = parts
@@ -209,7 +250,164 @@ def get_base(thing, **kwargs):
         p3["pos"] = pos1
         #p3["m"] = "#"
         oobb_base.append_full(thing,**p3)
+
+def get_holder_dc_to_dc_converter(thing, **kwargs):
+
+    prepare_print = kwargs.get("prepare_print", False)
+    width = kwargs.get("width", 1)
+    height = kwargs.get("height", 1)
+    depth = kwargs.get("thickness", 3)                    
+    rot = kwargs.get("rot", [0, 0, 0])
+    pos = kwargs.get("pos", [0, 0, 0])
+    extra = kwargs.get("extra", "")
+    holes = kwargs.get("holes", "top_and_bottom")
+    #kwargs.pop("holes", None)
+    if holes == "top_and_bottom":
+        holes = ["left", "right"]
+    elif holes == "top":
+        holes = "right"
+    part_details = kwargs.get("part_details", {})
+    mounting_hole_length = part_details.get("mounting_hole_length", 100)
+    mounting_hole_width = part_details.get("mounting_hole_width", 150)
+    mounting_hole_size = part_details.get("mounting_hole_diameter", "m4")
+    shift_y = kwargs.get("shift_y", 0)
+
+    #add plate
+    p3 = copy.deepcopy(kwargs)
+    p3["type"] = "positive"
+    p3["shape"] = f"oobb_plate"    
+    p3["depth"] = depth
+    #p3["holes"] = True         uncomment to include default holes
+    #p3["m"] = "#"
+    pos1 = copy.deepcopy(pos)         
+    p3["pos"] = pos1
+    p3.pop("holes", None)
+    oobb_base.append_full(thing,**p3)
     
+    #add holes seperate
+    p3 = copy.deepcopy(kwargs)
+    p3["type"] = "p"
+    p3["shape"] = f"oobb_holes"
+    p3["both_holes"] = True  
+    p3["depth"] = depth
+    p3["holes"] = holes
+    #p3["m"] = "#"
+    pos1 = copy.deepcopy(pos)         
+    p3["pos"] = pos1
+    oobb_base.append_full(thing,**p3)
+
+    #add mounting holes
+    if True:
+        poss = []
+        if True:
+            pos1 = copy.deepcopy(pos)
+            pos1[2] += 0
+            pos11 = copy.deepcopy(pos1)
+            pos11[0] += mounting_hole_length/2
+            pos11[1] += mounting_hole_width/2
+            poss.append(pos11)
+            pos12 = copy.deepcopy(pos1)
+            pos12[0] += -mounting_hole_length/2
+            pos12[1] += mounting_hole_width/2
+            poss.append(pos12)
+            pos13 = copy.deepcopy(pos1)
+            pos13[0] += -mounting_hole_length/2
+            pos13[1] += -mounting_hole_width/2
+            poss.append(pos13)
+            pos14 = copy.deepcopy(pos1)
+            pos14[0] += mounting_hole_length/2
+            pos14[1] += -mounting_hole_width/2
+            poss.append(pos14)
+        for pos1 in poss:
+            kwargs2 = copy.deepcopy(kwargs)
+            pos11 = copy.deepcopy(pos)
+            pos11[1] += shift_y
+            kwargs2["pos"] = pos11
+            p3 = add_standoff(thing, **kwargs2, position=pos1)
+            
+
+    if prepare_print:
+        #put into a rotation object
+        components_second = copy.deepcopy(thing["components"])
+        return_value_2 = {}
+        return_value_2["type"]  = "rotation"
+        return_value_2["typetype"]  = "p"
+        pos1 = copy.deepcopy(pos)
+        pos1[0] += 50
+        return_value_2["pos"] = pos1
+        return_value_2["rot"] = [180,0,0]
+        return_value_2["objects"] = components_second
+        
+        thing["components"].append(return_value_2)
+
+    
+        #add slice # top
+        p3 = copy.deepcopy(kwargs)
+        p3["type"] = "n"
+        p3["shape"] = f"oobb_slice"
+        pos1 = copy.deepcopy(pos)
+        pos1[0] += -500/2
+        pos1[1] += 0
+        pos1[2] += -500/2        
+        p3["pos"] = pos1
+        #p3["m"] = "#"
+        oobb_base.append_full(thing,**p3)
+
+def load_part(part_id):
+    folder_parts = "parts/"
+    folder = f"{folder_parts}{part_id}"
+    file_name = f"{folder}/working.yaml"
+    details = {}
+    if os.path.exists(file_name):
+        with open(file_name, 'r') as file:
+            try:
+                details = yaml.safe_load(file)
+            except yaml.YAMLError as exc:
+                print(exc)
+    else:
+        print(f"Part file not found: {file_name}")
+    return details
+
+def add_standoff(thing, **kwargs):
+    position = kwargs.get("position", [0,0,0]) 
+    pos = kwargs.get("pos", [0, 0, 0])
+    rot = kwargs.get("rot", [0, 0, 0])
+    depth = kwargs.get("thickness", 3)
+    mounting_hole_size = kwargs.get("part_details",{}).get("mounting_hole_size", "m4")
+    lift = 3
+    depth = depth + 3
+    p3 = copy.deepcopy(kwargs)
+    p3["type"] = "p"
+    p3["shape"] = f"oobb_cylinder"
+    rad = (float(mounting_hole_size.replace("m", "").replace("_","."))+4)/2
+    p3["radius"] = rad
+    p3["depth"] = depth
+    #p3["m"] = "#"
+    pos1 = copy.deepcopy(pos) 
+    pos1[0] += position[0]
+    pos1[1] += position[1]
+    pos1[2] += lift
+    p3["pos"] = pos1
+    oobb_base.append_full(thing,**p3)
+    #add countersunk screw
+    p3 = copy.deepcopy(kwargs)
+    p3["type"] = "n"
+    p3["shape"] = f"oobb_screw_countersunk"
+    p3["radius_name"] = mounting_hole_size
+    p3["depth"] = 10
+    p3["m"] = "#"
+    pos1 = copy.deepcopy(pos)
+    pos1[0] += position[0]
+    pos1[1] += position[1]
+    pos1[2] += 0
+    p3["pos"] = pos1
+    rot1 = copy.deepcopy(rot)
+    rot1[0] += 180
+    p3["rot"] = rot1
+    oobb_base.append_full(thing,**p3)
+    
+
+
 if __name__ == '__main__':
     kwargs = {}
     main(**kwargs)
